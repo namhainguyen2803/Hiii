@@ -3,7 +3,7 @@
 cd ..
 
 # custom config
-DATA=your_data_path
+DATA=data
 TRAINER=PLOT 
 
 DATASET=$1
@@ -18,7 +18,7 @@ for SHOTS in 1 2 4 8 16
 do
 for SEED in 1 2 3
 do
-DIR=your_work_path/plot-coop/output/OP_N${N}/${DATASET}/${TRAINER}/${CFG}_${SHOTS}shots/nctx${NCTX}_csc${CSC}_ctp${CTP}/seed${SEED}
+DIR=result/plot-coop/output/OP_N${N}/${DATASET}/${TRAINER}/${CFG}_${SHOTS}shots/nctx${NCTX}_csc${CSC}_ctp${CTP}/seed${SEED}
 if [ -d "$DIR" ]; then
     echo "Results are available in ${DIR}. Skip this job"
 else
