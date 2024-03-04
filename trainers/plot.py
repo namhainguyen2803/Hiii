@@ -374,7 +374,7 @@ class PLOT(TrainerX):
             a = a / a.sum()
             b = b / b.sum()
             T_empirical = T_empirical / T_empirical.sum()
-            T_opt = ot.sinkhorn(a=a, b=b, output=output, reg=reg, method="sinkhorn_stabilized")
+            T_opt = ot.sinkhorn(a=a, b=b, M=output, reg=reg, method="sinkhorn_stabilized")
             loss = F.kl_div(T_opt, T_empirical)
             self.model_backward_and_update(loss)
 
