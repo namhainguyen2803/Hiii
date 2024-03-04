@@ -231,7 +231,6 @@ class CustomCLIP(nn.Module):
         
         b = image.shape[0]
         image_features = self.image_encoder(image.type(self.dtype))  # [50, 32, 1024]
-        image_feature_pool = image_features[0]
         image_features = image_features[1:] # [49, 32, 1024]
         M = image_features.shape[0]
         self.d = image_features.shape[-1]
@@ -242,24 +241,12 @@ class CustomCLIP(nn.Module):
 
         prompts = self.prompt_learner()   
         tokenized_prompts = self.tokenized_prompts
-        if self.dataset == "ImageNet":
-            text_features = self.text_encoder(prompts.to(self.device1), tokenized_prompts.to(self.device1))
-            text_features = text_features.to(self.device)
-            text_features = text_features.contiguous().view(self.N, self.n_cls, self.d)
-            text_feature_pool = text_features.mean(dim=0)
-        else:
-            text_features = self.text_encoder(prompts, tokenized_prompts)
-            text_features = text_features.contiguous().view(self.N, self.n_cls, self.d)
-            text_feature_pool = text_features.mean(dim=0)
 
-        # image_features.shape == [49, 32, 1024]
-        # text_features.shape == [4, 102, 1024]
+        text_features = self.text_encoder(prompts, tokenized_prompts)
+        text_features = text_features.contiguous().view(self.N, self.n_cls, self.d)
+
         image_features = F.normalize(image_features, dim=2)
-        image_feature_pool = F.normalize(image_feature_pool, dim=1)
         text_features = F.normalize(text_features, dim=2)
-        text_feature_pool = F.normalize(text_feature_pool, dim=1)
-        # image_feature_pool.shape == [32, 1024]
-        # text_feature_pool.shape == [102, 1024]
         # image_features.shape == [49, 32, 1024]
         # text_features.shape == [4, 102, 1024]
 
@@ -278,9 +265,9 @@ class CustomCLIP(nn.Module):
 
         sim_op = torch.sum(T * wdist, dim=(1, 2)) # change here
         sim_op = sim_op.contiguous().view(b,self.n_cls)
-        
-        logit = self.logit_scale.exp() * sim_op
-        return logit
+
+        ot_distance = self.logit_scale.exp() * sim_op
+        return ot_distance
 
 
 @TRAINER_REGISTRY.register()
@@ -337,9 +324,9 @@ class PLOT(TrainerX):
         # label.shape == [32]
         # image.shape == [32, 3, 224, 224]
 
-        output = self.model(image) # shape == [32, 102]
-        batch_size = output.shape[0]
-        num_classes = output.shape[1]
+        ot_distance = self.model(image) # shape == [32, 102]
+        batch_size = ot_distance.shape[0]
+        num_classes = ot_distance.shape[1]
         reg = 0.001
         a = torch.ones(batch_size).to(self.device)
         b = torch.zeros(num_classes).to(self.device)
@@ -351,8 +338,8 @@ class PLOT(TrainerX):
         a = a / a.sum()
         b = b / b.sum()
         T_empirical = T_empirical / T_empirical.sum()
-        output = output / output.max()
-        T_opt = ot.sinkhorn(a=a, b=b, M=output, reg=reg, numItermax=10000, method="sinkhorn_log")
+        ot_distance = ot_distance / ot_distance.max()
+        T_opt = ot.sinkhorn(a=a, b=b, M=ot_distance, reg=reg, numItermax=10000, method="sinkhorn_log")
         print(T_opt.sum(), T_empirical.sum())
         loss = -T_empirical * torch.log(T_opt + 1e-6)
         loss = torch.sum(loss)
@@ -367,6 +354,10 @@ class PLOT(TrainerX):
             self.update_lr()
 
         return loss_summary
+
+    def model_inference(self, image):
+        ot_distance = self.model(image)
+        return -1 * ot_distance
 
     def parse_batch_train(self, batch):
         input = batch["img"]
