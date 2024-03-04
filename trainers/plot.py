@@ -243,18 +243,18 @@ class CustomCLIP(nn.Module):
         prompts = self.prompt_learner()   
         tokenized_prompts = self.tokenized_prompts
         if self.dataset == "ImageNet":
-            text_features = self.text_encoder(prompts.to(self.device1), tokenized_prompts.to(self.device1)) 
+            text_features = self.text_encoder(prompts.to(self.device1), tokenized_prompts.to(self.device1))
             text_features = text_features.to(self.device)
-            text_features =  text_features.contiguous().view(self.N, self.n_cls, self.d)  
+            text_features = text_features.contiguous().view(self.N, self.n_cls, self.d)
             text_feature_pool = text_features.mean(dim=0)
         else:
-            text_features = self.text_encoder(prompts, tokenized_prompts) 
-            text_features =  text_features.contiguous().view(self.N, self.n_cls, self.d)  
+            text_features = self.text_encoder(prompts, tokenized_prompts)
+            text_features = text_features.contiguous().view(self.N, self.n_cls, self.d)
             text_feature_pool = text_features.mean(dim=0)
 
         # image_features.shape == [49, 32, 1024]
         # text_features.shape == [4, 102, 1024]
-        image_features =  F.normalize(image_features, dim=2)
+        image_features = F.normalize(image_features, dim=2)
         image_feature_pool = F.normalize(image_feature_pool, dim=1)
         text_features = F.normalize(text_features, dim=2)
         text_feature_pool = F.normalize(text_feature_pool, dim=1)
@@ -270,18 +270,14 @@ class CustomCLIP(nn.Module):
         xx=torch.zeros(b*self.n_cls, M, dtype=sim.dtype, device=sim.device).fill_(1. / M)
         yy=torch.zeros(b*self.n_cls, self.N, dtype=sim.dtype, device=sim.device).fill_(1. / self.N)
 
-        
-
         with torch.no_grad():
             KK = torch.exp(-wdist / self.eps)
             T = self.Sinkhorn(KK,xx,yy)
         if torch.isnan(T).any():
             return None
 
-
-        sim_op = torch.sum(T * sim, dim=(1, 2))
+        sim_op = torch.sum(T * wdist, dim=(1, 2)) # change here
         sim_op = sim_op.contiguous().view(b,self.n_cls)
-        
 
         logit_scale = self.logit_scale.exp()
         logits = logit_scale * image_feature_pool @ text_feature_pool.t()
@@ -374,8 +370,11 @@ class PLOT(TrainerX):
             a = a / a.sum()
             b = b / b.sum()
             T_empirical = T_empirical / T_empirical.sum()
-            T_opt = ot.sinkhorn(a=a, b=b, M=output, reg=reg, method="sinkhorn_stabilized")
-            loss = F.kl_div(T_opt, T_empirical)
+            output = output / output.max()
+            T_opt = ot.sinkhorn(a=a, b=b, M=output, reg=reg, numItermax=10000, method="sinkhorn_log")
+            print(T_opt.sum(), T_empirical.sum())
+            loss = -T_empirical * torch.log(T_opt+1e-6)
+            loss = torch.sum(loss)
             self.model_backward_and_update(loss)
 
         loss_summary = {
