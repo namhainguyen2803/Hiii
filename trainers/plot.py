@@ -361,22 +361,21 @@ class PLOT(TrainerX):
             self.scaler.update()
         else:
             output = self.model(image) # shape == [32, 102]
-            # batch_size = output.shape[0]
-            # num_classes = output.shape[1]
-            loss = F.cross_entropy(output, label)
-            # reg = 0.001
-            # a = torch.ones(batch_size).to(self.device)
-            # b = torch.zeros(num_classes).to(self.device)
-            # T_empirical = torch.zeros(batch_size, num_classes).to(self.device)
-            # for i in range(len(label)):
-            #     cls = int(label[i].item())
-            #     b[cls] += 1
-            #     T_empirical[i, cls] += 1
-            # a = a / a.sum()
-            # b = b / b.sum()
-            # T_empirical = T_empirical / T_empirical.sum()
-            # T_opt = ot.sinkhorn(a, b, output, reg)
-            # loss = F.kl_div(T_opt, T_empirical)
+            batch_size = output.shape[0]
+            num_classes = output.shape[1]
+            reg = 0.001
+            a = torch.ones(batch_size).to(self.device)
+            b = torch.zeros(num_classes).to(self.device)
+            T_empirical = torch.zeros(batch_size, num_classes).to(self.device)
+            for i in range(len(label)):
+                cls = int(label[i].item())
+                b[cls] += 1
+                T_empirical[i, cls] += 1
+            a = a / a.sum()
+            b = b / b.sum()
+            T_empirical = T_empirical / T_empirical.sum()
+            T_opt = ot.sinkhorn(a=a, b=b, output=output, reg=reg, method="sinkhorn_stabilized")
+            loss = F.kl_div(T_opt, T_empirical)
             self.model_backward_and_update(loss)
 
         loss_summary = {
