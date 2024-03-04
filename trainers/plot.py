@@ -1,9 +1,9 @@
 import os.path as osp
-import ot
 import torch
 import torch.nn as nn
 from torch.nn import functional as F
 from torch.cuda.amp import GradScaler, autocast
+from utils import SinkhornAlgorithm
 
 from dassl.engine import TRAINER_REGISTRY, TrainerX
 from dassl.metrics import compute_accuracy
@@ -208,27 +208,11 @@ class CustomCLIP(nn.Module):
         self.N = cfg.TRAINER.PLOT.N
         self.dataset = cfg.DATASET.NAME
         self.use_uniform = True
-        self.eps = 0.1
+        self.eps = 0.001
         self.max_iter = 100
 
-    def Sinkhorn(self, K, u, v):
-        r = torch.ones_like(u)
-        c = torch.ones_like(v)
-        thresh = 1e-2
-        for i in range(self.max_iter):
-            r0 = r
-            r = u / torch.matmul(K, c.unsqueeze(-1)).squeeze(-1)
-            c = v / torch.matmul(K.permute(0, 2, 1).contiguous(), r.unsqueeze(-1)).squeeze(-1)
-            err = (r - r0).abs().mean()
-            if err.item() < thresh:
-                break
-
-        T = torch.matmul(r.unsqueeze(-1), c.unsqueeze(-2)) * K
-
-        return T
-
     def forward(self, image):
-        
+
         b = image.shape[0]
         image_features = self.image_encoder(image.type(self.dtype))  # [50, 32, 1024]
         image_features = image_features[1:] # [49, 32, 1024]
@@ -239,7 +223,7 @@ class CustomCLIP(nn.Module):
         # self.d: 1024
         # self.N: 4
 
-        prompts = self.prompt_learner()   
+        prompts = self.prompt_learner()
         tokenized_prompts = self.tokenized_prompts
 
         text_features = self.text_encoder(prompts, tokenized_prompts)
@@ -250,21 +234,19 @@ class CustomCLIP(nn.Module):
         # image_features.shape == [49, 32, 1024]
         # text_features.shape == [4, 102, 1024]
 
-        sim = torch.einsum('mbd,ncd->mnbc', image_features, text_features).contiguous()  
-        sim = sim.view(M,self.N,b*self.n_cls)
-        sim = sim.permute(2,0,1)
+        sim = torch.einsum('mbd,ncd->mnbc', image_features, text_features).contiguous()
+        sim = sim.view(M, self.N, b * self.n_cls)
+        sim = sim.permute(2, 0, 1)
         wdist = 1.0 - sim
-        xx=torch.zeros(b*self.n_cls, M, dtype=sim.dtype, device=sim.device).fill_(1. / M)
-        yy=torch.zeros(b*self.n_cls, self.N, dtype=sim.dtype, device=sim.device).fill_(1. / self.N)
 
+        p=torch.zeros(b*self.n_cls, M, dtype=wdist.dtype, device=wdist.device).fill_(1. / M)
+        q=torch.zeros(b*self.n_cls, self.N, dtype=wdist.dtype, device=wdist.device).fill_(1. / self.N)
+        sinkhorn_solver = SinkhornAlgorithm(self.eps)
         with torch.no_grad():
-            KK = torch.exp(-wdist / self.eps)
-            T = self.Sinkhorn(KK,xx,yy)
-        if torch.isnan(T).any():
-            return None
+            T = sinkhorn_solver(p, q, wdist)
 
         sim_op = torch.sum(T * wdist, dim=(1, 2)) # change here
-        sim_op = sim_op.contiguous().view(b,self.n_cls)
+        sim_op = sim_op.contiguous().view(b, self.n_cls)
 
         ot_distance = self.logit_scale.exp() * sim_op
         return ot_distance
@@ -327,7 +309,7 @@ class PLOT(TrainerX):
         ot_distance = self.model(image) # shape == [32, 102]
         batch_size = ot_distance.shape[0]
         num_classes = ot_distance.shape[1]
-        reg = 0.001
+
         a = torch.ones(batch_size).to(self.device)
         b = torch.zeros(num_classes).to(self.device)
         T_empirical = torch.zeros(batch_size, num_classes).to(self.device)
@@ -339,7 +321,8 @@ class PLOT(TrainerX):
         b = b / b.sum()
         T_empirical = T_empirical / T_empirical.sum()
         ot_distance = ot_distance / ot_distance.max()
-        T_opt = ot.sinkhorn(a=a, b=b, M=ot_distance, reg=reg, numItermax=10000, method="sinkhorn_log")
+        sinkhorn_solver = SinkhornAlgorithm(self.model.eps)
+        T_opt = sinkhorn_solver(a, b, ot_distance)
         print(T_opt.sum(), T_empirical.sum())
         loss = -T_empirical * torch.log(T_opt + 1e-6)
         loss = torch.sum(loss)
