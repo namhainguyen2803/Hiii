@@ -1,5 +1,5 @@
 import os.path as osp
-
+import ot
 import torch
 import torch.nn as nn
 from torch.nn import functional as F
@@ -230,11 +230,15 @@ class CustomCLIP(nn.Module):
     def forward(self, image):
         
         b = image.shape[0]
-        image_features = self.image_encoder(image.type(self.dtype))  
+        image_features = self.image_encoder(image.type(self.dtype))  # [50, 32, 1024]
         image_feature_pool = image_features[0]
-        image_features = image_features[1:]  
+        image_features = image_features[1:] # [49, 32, 1024]
         M = image_features.shape[0]
         self.d = image_features.shape[-1]
+        # b: 32
+        # M: 49
+        # self.d: 1024
+        # self.N: 4
 
         prompts = self.prompt_learner()   
         tokenized_prompts = self.tokenized_prompts
@@ -248,11 +252,16 @@ class CustomCLIP(nn.Module):
             text_features =  text_features.contiguous().view(self.N, self.n_cls, self.d)  
             text_feature_pool = text_features.mean(dim=0)
 
-        
-        image_features =  F.normalize(image_features, dim=2) 
+        # image_features.shape == [49, 32, 1024]
+        # text_features.shape == [4, 102, 1024]
+        image_features =  F.normalize(image_features, dim=2)
         image_feature_pool = F.normalize(image_feature_pool, dim=1)
         text_features = F.normalize(text_features, dim=2)
         text_feature_pool = F.normalize(text_feature_pool, dim=1)
+        # image_feature_pool.shape == [32, 1024]
+        # text_feature_pool.shape == [102, 1024]
+        # image_features.shape == [49, 32, 1024]
+        # text_features.shape == [4, 102, 1024]
 
         sim = torch.einsum('mbd,ncd->mnbc', image_features, text_features).contiguous()  
         sim = sim.view(M,self.N,b*self.n_cls)
@@ -339,7 +348,8 @@ class PLOT(TrainerX):
 
     def forward_backward(self, batch):
         image, label = self.parse_batch_train(batch)
-        
+        # label.shape == [32]
+        # image.shape == [32, 3, 224, 224]
         prec = self.cfg.TRAINER.PLOT.PREC
         if prec == "amp":
             with autocast():
@@ -350,8 +360,23 @@ class PLOT(TrainerX):
             self.scaler.step(self.optim)
             self.scaler.update()
         else:
-            output = self.model(image)
-            loss = F.cross_entropy(output, label)
+            output = self.model(image) # shape == [32, 102]
+            batch_size = output.shape[0]
+            num_classes = output.shape[1]
+            # loss = F.cross_entropy(output, label)
+            reg = 0.001
+            a = torch.ones(batch_size).to(self.device)
+            b = torch.zeros(num_classes).to(self.device)
+            T_empirical = torch.zeros(batch_size, num_classes).to(self.device)
+            for i in range(len(label)):
+                cls = int(label[i].item())
+                b[cls] += 1
+                T_empirical[i, cls] += 1
+            a = a / a.sum()
+            b = b / b.sum()
+            T_empirical = T_empirical / T_empirical.sum()
+            T_opt = ot.sinkhorn(a, b, output, reg)
+            loss = F.kl_div(T_opt, T_empirical)
             self.model_backward_and_update(loss)
 
         loss_summary = {
