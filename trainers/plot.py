@@ -278,13 +278,9 @@ class CustomCLIP(nn.Module):
 
         sim_op = torch.sum(T * wdist, dim=(1, 2)) # change here
         sim_op = sim_op.contiguous().view(b,self.n_cls)
-
-        logit_scale = self.logit_scale.exp()
-        logits = logit_scale * image_feature_pool @ text_feature_pool.t()
-        logits2 = logit_scale * sim_op
-        if self.dataset == "ImageNet":
-            logits2 = (logits2 + logits)
-        return logits2
+        
+        logit = self.logit_scale.exp() * sim_op
+        return logit
 
 
 @TRAINER_REGISTRY.register()
@@ -335,51 +331,36 @@ class PLOT(TrainerX):
 
         self.scaler = GradScaler() if cfg.TRAINER.PLOT.PREC == "amp" else None
 
-        # Note that multi-gpu training could be slow because CLIP's size is
-        # big, which slows down the copy operation in DataParallel
-        # device_count = torch.cuda.device_count()
-        # if device_count > 1:
-        #     print(f"Multiple GPUs detected (n_gpus={device_count}), use all of them!")
-        #     self.model = nn.DataParallel(self.model)
 
     def forward_backward(self, batch):
         image, label = self.parse_batch_train(batch)
         # label.shape == [32]
         # image.shape == [32, 3, 224, 224]
-        prec = self.cfg.TRAINER.PLOT.PREC
-        if prec == "amp":
-            with autocast():
-                output = self.model(image)
-                loss = F.cross_entropy(output, label)
-            self.optim.zero_grad()
-            self.scaler.scale(loss).backward()
-            self.scaler.step(self.optim)
-            self.scaler.update()
-        else:
-            output = self.model(image) # shape == [32, 102]
-            batch_size = output.shape[0]
-            num_classes = output.shape[1]
-            reg = 0.001
-            a = torch.ones(batch_size).to(self.device)
-            b = torch.zeros(num_classes).to(self.device)
-            T_empirical = torch.zeros(batch_size, num_classes).to(self.device)
-            for i in range(len(label)):
-                cls = int(label[i].item())
-                b[cls] += 1
-                T_empirical[i, cls] += 1
-            a = a / a.sum()
-            b = b / b.sum()
-            T_empirical = T_empirical / T_empirical.sum()
-            output = output / output.max()
-            T_opt = ot.sinkhorn(a=a, b=b, M=output, reg=reg, numItermax=10000, method="sinkhorn_log")
-            print(T_opt.sum(), T_empirical.sum())
-            loss = -T_empirical * torch.log(T_opt+1e-6)
-            loss = torch.sum(loss)
-            self.model_backward_and_update(loss)
+
+        output = self.model(image) # shape == [32, 102]
+        batch_size = output.shape[0]
+        num_classes = output.shape[1]
+        reg = 0.001
+        a = torch.ones(batch_size).to(self.device)
+        b = torch.zeros(num_classes).to(self.device)
+        T_empirical = torch.zeros(batch_size, num_classes).to(self.device)
+        for i in range(len(label)):
+            cls = int(label[i].item())
+            b[cls] += 1
+            T_empirical[i, cls] += 1
+        a = a / a.sum()
+        b = b / b.sum()
+        T_empirical = T_empirical / T_empirical.sum()
+        output = output / output.max()
+        T_opt = ot.sinkhorn(a=a, b=b, M=output, reg=reg, numItermax=10000, method="sinkhorn_log")
+        print(T_opt.sum(), T_empirical.sum())
+        loss = -T_empirical * torch.log(T_opt + 1e-6)
+        loss = torch.sum(loss)
+        self.model_backward_and_update(loss)
 
         loss_summary = {
             "loss": loss.item(),
-            "acc": compute_accuracy(output, label)[0].item(),
+            "acc": compute_accuracy(T_opt, label)[0].item(),
         }
 
         if (self.batch_idx + 1) == self.num_batches:
