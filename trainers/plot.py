@@ -270,7 +270,7 @@ class CustomCLIP(nn.Module):
             return None
 
 
-        sim_op = torch.sum(T * sim, dim=(1, 2))
+        sim_op = torch.sum(T * wdist, dim=(1, 2))
         sim_op = sim_op.contiguous().view(b,self.n_cls)
         
 
@@ -350,7 +350,7 @@ class PLOT(TrainerX):
             self.scaler.step(self.optim)
             self.scaler.update()
         else:
-            output = self.model(image)
+            output = -self.model(image)
             loss = F.cross_entropy(output, label)
             self.model_backward_and_update(loss)
 
@@ -363,6 +363,10 @@ class PLOT(TrainerX):
             self.update_lr()
 
         return loss_summary
+
+    def model_inference(self, image):
+        ot_distance = self.model(image)
+        return -1 * ot_distance
 
     def parse_batch_train(self, batch):
         input = batch["img"]
