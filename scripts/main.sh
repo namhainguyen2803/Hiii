@@ -14,7 +14,7 @@ NCTX=16  # number of context tokens
 CSC=False  # class-specific context (False or True)
 N=$2  # number of proxy
 
-for SHOTS in 1 2 4 8 16
+for SHOTS in 1
 do
 for SEED in 1 2 3
 do

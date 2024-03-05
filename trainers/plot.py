@@ -339,7 +339,7 @@ class PLOT(TrainerX):
         b = b / b.sum()
         T_empirical = T_empirical / T_empirical.sum()
         ot_distance = ot_distance / ot_distance.max()
-        T_opt = ot.sinkhorn(a=a, b=b, M=ot_distance, reg=reg, numItermax=10000, method="sinkhorn_log")
+        T_opt = ot.sinkhorn(a=a, b=b, M=ot_distance, reg=reg, numItermax=1000, method="sinkhorn_log")
         print(T_opt.sum(), T_empirical.sum())
         loss = -T_empirical * torch.log(T_opt + 1e-6)
         loss = torch.sum(loss)
