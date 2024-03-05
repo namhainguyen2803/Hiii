@@ -329,22 +329,22 @@ class PLOT(TrainerX):
         num_classes = ot_distance.shape[1]
         reg = 0.001
         a = torch.ones(batch_size).to(self.device)
-        b = torch.zeros(num_classes).to(self.device)
+        b = torch.ones(num_classes).to(self.device)
         T_empirical = torch.zeros(batch_size, num_classes).to(self.device)
         for i in range(len(label)):
             cls = int(label[i].item())
-            b[cls] += 1
             T_empirical[i, cls] += 1
         a = a / a.sum()
         b = b / b.sum()
         T_empirical = T_empirical / T_empirical.sum()
         ot_distance = ot_distance / ot_distance.max()
-        T_opt = ot.sinkhorn(a=a, b=b, M=ot_distance, reg=reg, numItermax=1000, method="sinkhorn_log")
-        print(T_opt.sum(), T_empirical.sum())
+        T_opt = ot.sinkhorn(a=a, b=b, M=ot_distance, reg=reg, numItermax=10000, method="sinkhorn_log")
         loss = -T_empirical * torch.log(T_opt + 1e-6)
         loss = torch.sum(loss)
         self.model_backward_and_update(loss)
 
+        pred = torch.argmax(-ot_distance, dim=1)
+        print(f"Acc1: {torch.sum(pred == label) / len(pred)}")
         loss_summary = {
             "loss": loss.item(),
             "acc": compute_accuracy(T_opt, label)[0].item(),
@@ -356,8 +356,17 @@ class PLOT(TrainerX):
         return loss_summary
 
     def model_inference(self, image):
-        ot_distance = self.model(image)
-        return -1 * ot_distance
+        ot_distance = self.model(image) # shape == [32, 102]
+        batch_size = ot_distance.shape[0]
+        num_classes = ot_distance.shape[1]
+        reg = 0.001
+        a = torch.ones(batch_size).to(self.device)
+        b = torch.ones(num_classes).to(self.device)
+        a = a / a.sum()
+        b = b / b.sum()
+        ot_distance = ot_distance / ot_distance.max()
+        T_opt = ot.sinkhorn(a=a, b=b, M=ot_distance, reg=reg, numItermax=10000, method="sinkhorn_log")
+        return T_opt
 
     def parse_batch_train(self, batch):
         input = batch["img"]
