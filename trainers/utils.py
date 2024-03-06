@@ -3,7 +3,7 @@ import torch.nn as nn
 
 class SinkhornAlgorithm(nn.Module):
 
-    def __init__(self, epsilon=0.01, iterations=10000, threshold=1e-9):
+    def __init__(self, epsilon=0.01, iterations=100000, threshold=1e-9):
         super(SinkhornAlgorithm, self).__init__()
         self.epsilon = epsilon
         self.iterations = iterations
@@ -16,8 +16,8 @@ class SinkhornAlgorithm(nn.Module):
 
     def forward(self, p, q, cost_matrix):
 
-        u = torch.ones_like(p)
-        v = torch.ones_like(q)
+        u = torch.zeros_like(p)
+        v = torch.zeros_like(q)
 
         for i in range(self.iterations):
             old_u = u
