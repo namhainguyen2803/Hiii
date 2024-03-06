@@ -4,6 +4,7 @@ import torch
 import torch.nn as nn
 from torch.nn import functional as F
 from torch.cuda.amp import GradScaler, autocast
+from trainers.utils import SinkhornAlgorithm
 
 from dassl.engine import TRAINER_REGISTRY, TrainerX
 from dassl.metrics import compute_accuracy
@@ -254,14 +255,12 @@ class CustomCLIP(nn.Module):
         sim = sim.view(M,self.N,b*self.n_cls)
         sim = sim.permute(2,0,1)
         wdist = 1.0 - sim
-        xx=torch.zeros(b*self.n_cls, M, dtype=sim.dtype, device=sim.device).fill_(1. / M)
-        yy=torch.zeros(b*self.n_cls, self.N, dtype=sim.dtype, device=sim.device).fill_(1. / self.N)
 
+        p = torch.zeros(b*self.n_cls, M, dtype=wdist.dtype, device=wdist.device).fill_(1. / M)
+        q = torch.zeros(b*self.n_cls, self.N, dtype=wdist.dtype, device=wdist.device).fill_(1. / self.N)
+        sinkhorn_solver = SinkhornAlgorithm(epsilon=self.eps, iterations=self.max_iter)
         with torch.no_grad():
-            KK = torch.exp(-wdist / self.eps)
-            T = self.Sinkhorn(KK,xx,yy)
-        if torch.isnan(T).any():
-            return None
+            T = sinkhorn_solver(p, q, wdist)
 
         sim_op = torch.sum(T * wdist, dim=(1, 2)) # change here
         sim_op = sim_op.contiguous().view(b,self.n_cls)
