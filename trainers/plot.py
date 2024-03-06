@@ -208,7 +208,7 @@ class CustomCLIP(nn.Module):
         self.N = cfg.TRAINER.PLOT.N
         self.dataset = cfg.DATASET.NAME
         self.use_uniform = True
-        self.eps = 0.01
+        self.eps = 0.1
         self.max_iter = 100
 
     def forward(self, image):
@@ -241,7 +241,7 @@ class CustomCLIP(nn.Module):
 
         p=torch.zeros(b*self.n_cls, M, dtype=wdist.dtype, device=wdist.device).fill_(1. / M)
         q=torch.zeros(b*self.n_cls, self.N, dtype=wdist.dtype, device=wdist.device).fill_(1. / self.N)
-        sinkhorn_solver = SinkhornAlgorithm(epsilon=self.eps, iterations=1000)
+        sinkhorn_solver = SinkhornAlgorithm(epsilon=self.eps, iterations=100)
         with torch.no_grad():
             T = sinkhorn_solver(p, q, wdist)
 
