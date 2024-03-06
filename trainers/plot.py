@@ -241,7 +241,7 @@ class CustomCLIP(nn.Module):
 
         p=torch.zeros(b*self.n_cls, M, dtype=wdist.dtype, device=wdist.device).fill_(1. / M)
         q=torch.zeros(b*self.n_cls, self.N, dtype=wdist.dtype, device=wdist.device).fill_(1. / self.N)
-        sinkhorn_solver = SinkhornAlgorithm(epsilon=self.eps, iterations=100)
+        sinkhorn_solver = SinkhornAlgorithm(epsilon=self.eps, iterations=self.max_iter)
         with torch.no_grad():
             T = sinkhorn_solver(p, q, wdist)
 
