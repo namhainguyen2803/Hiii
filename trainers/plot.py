@@ -326,7 +326,7 @@ class PLOT(TrainerX):
         ot_distance = self.model(image) # shape == [32, 102]
         batch_size = ot_distance.shape[0]
         num_classes = ot_distance.shape[1]
-        reg = 0.01
+        reg = 0.1
         a = torch.ones(batch_size).to(self.device)
         b = torch.zeros(num_classes).to(self.device)
         T_empirical = torch.zeros(batch_size, num_classes).to(self.device)
