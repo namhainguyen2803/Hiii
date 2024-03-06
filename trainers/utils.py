@@ -3,7 +3,7 @@ import torch.nn as nn
 
 class SinkhornAlgorithm(nn.Module):
 
-    def __init__(self, epsilon=0.001, iterations=10000, threshold=1e-9):
+    def __init__(self, epsilon=0.01, iterations=10000, threshold=1e-9):
         super(SinkhornAlgorithm, self).__init__()
         self.epsilon = epsilon
         self.iterations = iterations
