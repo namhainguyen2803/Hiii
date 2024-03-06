@@ -244,7 +244,7 @@ class CustomCLIP(nn.Module):
         sinkhorn_solver = SinkhornAlgorithm(self.eps)
         with torch.no_grad():
             T = sinkhorn_solver(p, q, wdist)
-            print(T.shape(), T.sum() / (b*self.n_cls))
+            print(T.shape, T.sum() / (b*self.n_cls))
 
         sim_op = torch.sum(T * wdist, dim=(1, 2)) # change here
         sim_op = sim_op.contiguous().view(b, self.n_cls)
