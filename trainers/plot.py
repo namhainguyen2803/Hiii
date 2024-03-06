@@ -338,7 +338,10 @@ class PLOT(TrainerX):
         b = b / b.sum()
         T_empirical = T_empirical / T_empirical.sum()
         ot_distance = ot_distance / ot_distance.max()
-        T_opt = ot.sinkhorn(a=a, b=b, M=ot_distance, reg=reg, numItermax=10000, method="sinkhorn_log")
+        reg_kl = (float("inf"), 0.5)
+        T_opt = ot.unbalanced.sinkhorn_unbalanced(a=a, b=b, reg=reg, reg_m=reg_kl, M=ot_distance, numItermax=10000)
+
+        # IOT
         loss = -T_empirical * torch.log(T_opt + 1e-6)
         loss = torch.sum(loss)
         self.model_backward_and_update(loss)
@@ -357,16 +360,7 @@ class PLOT(TrainerX):
 
     def model_inference(self, image):
         ot_distance = self.model(image) # shape == [32, 102]
-        batch_size = ot_distance.shape[0]
-        num_classes = ot_distance.shape[1]
-        reg = 0.001
-        a = torch.ones(batch_size).to(self.device)
-        b = torch.ones(num_classes).to(self.device)
-        a = a / a.sum()
-        b = b / b.sum()
-        ot_distance = ot_distance / ot_distance.max()
-        T_opt = ot.sinkhorn(a=a, b=b, M=ot_distance, reg=reg, numItermax=10000, method="sinkhorn_log")
-        return T_opt
+        return -1 * ot_distance
 
     def parse_batch_train(self, batch):
         input = batch["img"]
