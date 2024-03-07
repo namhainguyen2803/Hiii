@@ -326,19 +326,19 @@ class PLOT(TrainerX):
         ot_distance = self.model(image) # shape == [32, 102]
         batch_size = ot_distance.shape[0]
         num_classes = ot_distance.shape[1]
-        reg = 0.1
+        reg = 0.01
         a = torch.ones(batch_size).to(self.device)
-        b = torch.zeros(num_classes).to(self.device)
+        b = torch.ones(num_classes).to(self.device)
         T_empirical = torch.zeros(batch_size, num_classes).to(self.device)
         for i in range(len(label)):
             cls = int(label[i].item())
             T_empirical[i, cls] += 1
-            b[cls] += 1
+            # b[cls] += 1
         a = a / a.sum()
         b = b / b.sum()
         T_empirical = T_empirical / T_empirical.sum()
         ot_distance = ot_distance / ot_distance.max()
-        reg_kl = (float("inf"), 0.1)
+        reg_kl = (float("inf"), 0.001)
         T_opt = ot.unbalanced.sinkhorn_unbalanced(a=a.float(), b=b.float(), reg=reg, reg_m=reg_kl, M=ot_distance.float(), numItermax=10000, method="sinkhorn_stabilized")
         print(T_opt.sum())
         # IOT
