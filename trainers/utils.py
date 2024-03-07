@@ -43,3 +43,4 @@ class SinkhornAlgorithm(nn.Module):
         pi = torch.exp(K)
 
         return pi
+
