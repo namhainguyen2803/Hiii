@@ -322,7 +322,7 @@ class PLOT(TrainerX):
         b = b / b.sum()
         T_empirical = T_empirical / T_empirical.sum()
         ot_distance = ot_distance / ot_distance.max()
-        reg_kl = (float("inf"), 0.0)
+        reg_kl = (float("inf"), 0.001)
         T_opt = ot.unbalanced.sinkhorn_unbalanced(a=a.float(), b=b.float(), reg=reg, reg_m=reg_kl, M=ot_distance.float(), numItermax=10000, method="sinkhorn_stabilized")
 
         # IOT
