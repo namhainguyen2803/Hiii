@@ -16,7 +16,7 @@ N=$2  # number of proxy
 
 for SHOTS in 1
 do
-for SEED in 1 2
+for SEED in 1 2 3 4 5
 do
 DIR=result/plot-coop/output/OP_N${N}/${DATASET}/${TRAINER}/${CFG}_${SHOTS}shots/nctx${NCTX}_csc${CSC}_ctp${CTP}/seed${SEED}
 if [ -d "$DIR" ]; then
