@@ -328,7 +328,7 @@ class PLOT(TrainerX):
         num_classes = ot_distance.shape[1]
         reg = 0.01
         a = torch.ones(batch_size).to(self.device)
-        b = torch.ones(num_classes).to(self.device) / 2
+        b = torch.ones(num_classes).to(self.device) / num_classes
         T_empirical = torch.zeros(batch_size, num_classes).to(self.device)
         for i in range(len(label)):
             cls = int(label[i].item())
