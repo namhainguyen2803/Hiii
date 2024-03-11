@@ -4,7 +4,7 @@ import torch
 import torch.nn as nn
 from torch.nn import functional as F
 from torch.cuda.amp import GradScaler, autocast
-from trainers.utils import SinkhornAlgorithm
+from trainers.utils import *
 
 from dassl.engine import TRAINER_REGISTRY, TrainerX
 from dassl.metrics import compute_accuracy
@@ -326,6 +326,7 @@ class PLOT(TrainerX):
         T_opt = ot.unbalanced.sinkhorn_unbalanced(a=a.float(), b=b.float(), reg=reg, reg_m=reg_kl, M=ot_distance.float(), numItermax=10000, method="sinkhorn_stabilized")
         print(T_opt.sum())
         # IOT
+        T_opt = DBOT(a=a, b_d=b*0.1, b_u=b,  cost_matrix=ot_distance, reg=0.1, num_iterations=1000)
         loss = -T_empirical * torch.log(T_opt + 1e-8)
         loss = torch.sum(loss)
         self.model_backward_and_update(loss)
