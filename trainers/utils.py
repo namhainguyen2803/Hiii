@@ -44,7 +44,8 @@ class SinkhornAlgorithm(nn.Module):
 
         return pi
 
-def DBOT(a, b_d, b_u, cost_matrix, reg, num_iterations):
+def DBOT(a, b_d, b_u, cost_matrix, reg, num_iterations, device='cpu'):
+
 
     num_target = cost_matrix.shape[1]
     P = torch.exp(-cost_matrix / reg)
@@ -54,9 +55,9 @@ def DBOT(a, b_d, b_u, cost_matrix, reg, num_iterations):
         P = torch.matmul(torch.diag(a / source_marginal_P), P)
 
         target_marginal_P = torch.sum(P, dim=0)
-        P = torch.matmul(P, torch.diag(torch.max(b_d / target_marginal_P, torch.ones(num_target))))
+        P = torch.matmul(P, torch.diag(torch.max(b_d / target_marginal_P, torch.ones(num_target).to(device))))
 
         target_marginal_P = torch.sum(P, dim=0)
-        P = torch.matmul(P, torch.diag(torch.min(b_u / target_marginal_P, torch.ones(num_target))))
+        P = torch.matmul(P, torch.diag(torch.min(b_u / target_marginal_P, torch.ones(num_target).to(device))))
 
     return P

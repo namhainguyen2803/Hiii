@@ -326,7 +326,7 @@ class PLOT(TrainerX):
         # T_opt = ot.unbalanced.sinkhorn_unbalanced(a=a.float(), b=b.float(), reg=reg, reg_m=reg_kl, M=ot_distance.float(), numItermax=10000, method="sinkhorn_stabilized")
 
         # IOT
-        T_opt = DBOT(a=a.float(), b_d=b.float()*0.1, b_u=b.float(),  cost_matrix=ot_distance.float(), reg=0.1, num_iterations=1000)
+        T_opt = DBOT(a=a.float(), b_d=b.float()*0.1, b_u=b.float(),  cost_matrix=ot_distance.float(), reg=0.1, num_iterations=1000, device=self.device)
         print(T_opt.sum())
         loss = -T_empirical * torch.log(T_opt + 1e-8)
         loss = torch.sum(loss)
