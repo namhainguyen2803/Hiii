@@ -212,22 +212,6 @@ class CustomCLIP(nn.Module):
         self.eps = 0.1
         self.max_iter = 100
 
-    def Sinkhorn(self, K, u, v):
-        r = torch.ones_like(u)
-        c = torch.ones_like(v)
-        thresh = 1e-2
-        for i in range(self.max_iter):
-            r0 = r
-            r = u / torch.matmul(K, c.unsqueeze(-1)).squeeze(-1)
-            c = v / torch.matmul(K.permute(0, 2, 1).contiguous(), r.unsqueeze(-1)).squeeze(-1)
-            err = (r - r0).abs().mean()
-            if err.item() < thresh:
-                break
-
-        T = torch.matmul(r.unsqueeze(-1), c.unsqueeze(-2)) * K
-
-        return T
-
     def forward(self, image):
         
         b = image.shape[0]
@@ -328,12 +312,12 @@ class PLOT(TrainerX):
         num_classes = ot_distance.shape[1]
         reg = 0.01
         a = torch.ones(batch_size).to(self.device)
-        b = torch.ones(num_classes).to(self.device)
+        b = torch.ones(num_classes).to(self.device) / 2
         T_empirical = torch.zeros(batch_size, num_classes).to(self.device)
         for i in range(len(label)):
             cls = int(label[i].item())
             T_empirical[i, cls] += 1
-            # b[cls] += 1
+            b[cls] += 1
         a = a / a.sum()
         b = b / b.sum()
         T_empirical = T_empirical / T_empirical.sum()
