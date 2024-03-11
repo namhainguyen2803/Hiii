@@ -346,7 +346,17 @@ class PLOT(TrainerX):
 
     def model_inference(self, image):
         ot_distance = self.model(image) # shape == [32, 102]
-        return -1 * ot_distance
+        batch_size = ot_distance.shape[0]
+        num_classes = ot_distance.shape[1]
+        reg = 0.01
+        a = torch.ones(batch_size).to(self.device)
+        b = torch.ones(num_classes).to(self.device)
+        a = a / a.sum()
+        b = b / b.sum()
+        ot_distance = ot_distance / ot_distance.max()
+        reg_kl = (float("inf"), 0.01)
+        T_opt = ot.unbalanced.sinkhorn_unbalanced(a=a.float(), b=b.float(), reg=reg, reg_m=reg_kl, M=ot_distance.float(), numItermax=10000, method="sinkhorn_stabilized")
+        return -1 * T_opt
 
     def parse_batch_train(self, batch):
         input = batch["img"]
