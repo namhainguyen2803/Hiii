@@ -326,7 +326,7 @@ class PLOT(TrainerX):
         T_opt = ot.unbalanced.sinkhorn_unbalanced(a=a.float(), b=b.float(), reg=reg, reg_m=reg_kl, M=ot_distance.float(), numItermax=10000, method="sinkhorn_stabilized")
         print(T_opt.sum())
         # IOT
-        loss = -T_empirical * torch.log(T_opt + 1e-6)
+        loss = -T_empirical * torch.log(T_opt + 1e-8)
         loss = torch.sum(loss)
         self.model_backward_and_update(loss)
 
