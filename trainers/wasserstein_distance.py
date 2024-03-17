@@ -284,7 +284,7 @@ def sliced_wasserstein_distance(target_samples,
     assert target_samples.shape[1] == sources_samples.shape[1]
     embedding_dim = sources_samples.shape[1]
     projections = rand_projections(dim=embedding_dim, num_projections=num_projections, device=device)
-    return one_dimensional_Wasserstein(X=sources_samples, Y=sources_samples, theta=projections)
+    return one_dimensional_Wasserstein(X=sources_samples.float(), Y=sources_samples.float(), theta=projections.float())
     # encoded_projections = target_samples.matmul(projections.transpose(0, 1))
     # distribution_projections = (sources_samples.matmul(projections.transpose(0, 1)))
     # wasserstein_distance = (torch.sort(encoded_projections.transpose(0, 1), dim=1)[0] -
