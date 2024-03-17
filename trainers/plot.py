@@ -234,7 +234,7 @@ class CustomCLIP(nn.Module):
         b = image_features.shape[1]
 
         sim = torch.einsum('mbd,ncd->mnbc', image_features, text_features).contiguous()
-        print(sim.shape)
+
         sim = sim.view(M,self.N,b*self.n_cls)
         sim = sim.permute(2,0,1)
         wdist = 1.0 - sim
@@ -277,7 +277,7 @@ class CustomCLIP(nn.Module):
         text_features = F.normalize(text_features, dim=2)
         # image_features.shape == [49, 32, 1024]
         # text_features.shape == [4, 102, 1024]
-        print(image_features.shape, text_features.shape)
+        # print(image_features.shape, text_features.shape)
 
         return self.formulate_OT_cosine_distance(image_features=image_features, text_features=text_features)
 
