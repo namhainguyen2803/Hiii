@@ -234,7 +234,7 @@ class CustomCLIP(nn.Module):
         b = text_features.shape[1]
 
         sim = torch.einsum('mbd,ncd->mnbc', image_features, text_features).contiguous()
-        print(si.shape)
+        print(sim.shape)
         sim = sim.view(M,self.N,b*self.n_cls)
         sim = sim.permute(2,0,1)
         wdist = 1.0 - sim
