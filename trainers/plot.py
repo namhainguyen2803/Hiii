@@ -231,7 +231,7 @@ class CustomCLIP(nn.Module):
     def formulate_OT_cosine_distance(self, image_features, text_features):
 
         M = image_features.shape[0]
-        b = text_features.shape[1]
+        b = image_features.shape[1]
 
         sim = torch.einsum('mbd,ncd->mnbc', image_features, text_features).contiguous()
         print(sim.shape)
