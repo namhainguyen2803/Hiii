@@ -237,14 +237,14 @@ class CustomCLIP(nn.Module):
 
         image_features = image_features.permute(1, 0, 2)  # image_features.shape == [32, 49, 1024]
         text_features = text_features.permute(1, 0, 2)  # text_features.shape == [102, 4, 1024]
-
+        print(image_features.shape, text_features.shape)
         num_samples = image_features.shape[0]
         num_classes = text_features.shape[0]
         ot_distance = torch.zeros(num_samples, num_classes).to(self.device)
         for i in range(num_samples):
             for j in range(num_classes):
-                ot_distance[i, j] = sliced_wasserstein_distance(target_samples=image_features[i],
-                                                                sources_samples=text_features[j],
+                ot_distance[i, j] = sliced_wasserstein_distance(target_samples=image_features[i,:,:],
+                                                                sources_samples=text_features[j,:,:],
                                                                 num_projections=1000,
                                                                 p=2,
                                                                 device=self.device)
