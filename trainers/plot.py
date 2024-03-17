@@ -228,6 +228,32 @@ class CustomCLIP(nn.Module):
 
         return T
 
+    def formulate_OT_cosine_distance(self, image_features, text_features):
+
+        M = image_features.shape[0]
+        b = text_features.shape[1]
+
+        sim = torch.einsum('mbd,ncd->mnbc', image_features, text_features).contiguous()
+        sim = sim.view(M,self.N,b*self.n_cls)
+        sim = sim.permute(2,0,1)
+        wdist = 1.0 - sim
+
+        p = torch.zeros(b*self.n_cls, M, dtype=wdist.dtype, device=wdist.device).fill_(1. / M)
+        q = torch.zeros(b*self.n_cls, self.N, dtype=wdist.dtype, device=wdist.device).fill_(1. / self.N)
+        sinkhorn_solver = SinkhornAlgorithm(epsilon=self.eps, iterations=self.max_iter)
+        with torch.no_grad():
+            T = sinkhorn_solver(p, q, wdist)
+
+        sim_op = torch.sum(T * wdist, dim=(1, 2)) # change here
+        sim_op = sim_op.contiguous().view(b,self.n_cls)
+
+        ot_distance = self.logit_scale.exp() * sim_op
+
+        return ot_distance
+
+    def formulate_OT_Wasserstein_distance(self, image_features, text_features):
+        pass
+
     def forward(self, image):
         
         b = image.shape[0]
@@ -250,23 +276,9 @@ class CustomCLIP(nn.Module):
         text_features = F.normalize(text_features, dim=2)
         # image_features.shape == [49, 32, 1024]
         # text_features.shape == [4, 102, 1024]
+        print(image_features.shape, text_features.shape)
 
-        sim = torch.einsum('mbd,ncd->mnbc', image_features, text_features).contiguous()  
-        sim = sim.view(M,self.N,b*self.n_cls)
-        sim = sim.permute(2,0,1)
-        wdist = 1.0 - sim
-
-        p = torch.zeros(b*self.n_cls, M, dtype=wdist.dtype, device=wdist.device).fill_(1. / M)
-        q = torch.zeros(b*self.n_cls, self.N, dtype=wdist.dtype, device=wdist.device).fill_(1. / self.N)
-        sinkhorn_solver = SinkhornAlgorithm(epsilon=self.eps, iterations=self.max_iter)
-        with torch.no_grad():
-            T = sinkhorn_solver(p, q, wdist)
-
-        sim_op = torch.sum(T * wdist, dim=(1, 2)) # change here
-        sim_op = sim_op.contiguous().view(b,self.n_cls)
-
-        ot_distance = self.logit_scale.exp() * sim_op
-        return ot_distance
+        return self.formulate_OT_cosine_distance(image_features=image_features, text_features=text_features)
 
 
 @TRAINER_REGISTRY.register()
