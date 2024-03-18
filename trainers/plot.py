@@ -245,7 +245,7 @@ class CustomCLIP(nn.Module):
             for j in range(num_classes):
                 ot_distance[i, j] = sliced_wasserstein_distance(target_samples=image_features[i,:,:],
                                                                 sources_samples=text_features[j,:,:],
-                                                                num_projections=1000,
+                                                                num_projections=800,
                                                                 p=2,
                                                                 device=self.device)
         return ot_distance
