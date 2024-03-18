@@ -245,7 +245,7 @@ class CustomCLIP(nn.Module):
             for j in range(num_classes):
                 ot_distance[i, j] = sliced_wasserstein_distance(target_samples=image_features[i,:,:],
                                                                 sources_samples=text_features[j,:,:],
-                                                                num_projections=500,
+                                                                num_projections=1000,
                                                                 p=2,
                                                                 device=self.device)
         return ot_distance
@@ -268,8 +268,8 @@ class CustomCLIP(nn.Module):
         text_features = self.text_encoder(prompts, tokenized_prompts)
         text_features = text_features.contiguous().view(self.N, self.n_cls, self.d)
 
-        # image_features = F.normalize(image_features, dim=2)
-        # text_features = F.normalize(text_features, dim=2)
+        image_features = F.normalize(image_features, dim=2)
+        text_features = F.normalize(text_features, dim=2)
         # image_features.shape == [49, 32, 1024]
         # text_features.shape == [4, 102, 1024]
         # print(image_features.shape, text_features.shape)
