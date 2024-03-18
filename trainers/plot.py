@@ -237,7 +237,7 @@ class CustomCLIP(nn.Module):
 
         image_features = image_features.permute(1, 0, 2)  # image_features.shape == [32, 49, 1024]
         text_features = text_features.permute(1, 0, 2)  # text_features.shape == [102, 4, 1024]
-        print(image_features.shape, text_features.shape)
+
         num_samples = image_features.shape[0]
         num_classes = text_features.shape[0]
         ot_distance = torch.zeros(num_samples, num_classes).to(self.device)
@@ -268,8 +268,8 @@ class CustomCLIP(nn.Module):
         text_features = self.text_encoder(prompts, tokenized_prompts)
         text_features = text_features.contiguous().view(self.N, self.n_cls, self.d)
 
-        image_features = F.normalize(image_features, dim=2)
-        text_features = F.normalize(text_features, dim=2)
+        # image_features = F.normalize(image_features, dim=2)
+        # text_features = F.normalize(text_features, dim=2)
         # image_features.shape == [49, 32, 1024]
         # text_features.shape == [4, 102, 1024]
         # print(image_features.shape, text_features.shape)
@@ -331,6 +331,7 @@ class PLOT(TrainerX):
         # image.shape == [32, 3, 224, 224]
 
         output = -self.model(image)
+        print(-output)
         loss = F.cross_entropy(output, label)
         self.model_backward_and_update(loss)
 
