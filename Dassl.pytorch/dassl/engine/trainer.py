@@ -278,7 +278,7 @@ class TrainerBase:
     def forward_backward(self, batch):
         raise NotImplementedError
 
-    def model_inference(self, input):
+    def model_inference(self, input, label):
         raise NotImplementedError
 
     def model_zero_grad(self, names=None):
@@ -461,7 +461,7 @@ class SimpleTrainer(TrainerBase):
 
         for batch_idx, batch in enumerate(tqdm(data_loader)):
             input, label = self.parse_batch_test(batch)
-            output = self.model_inference(input)
+            output = self.model_inference(input, label)
             self.evaluator.process(output, label)
 
         results = self.evaluator.evaluate()
@@ -472,8 +472,8 @@ class SimpleTrainer(TrainerBase):
 
         return list(results.values())[0]
 
-    def model_inference(self, input):
-        return self.model(input)
+    def model_inference(self, input, label):
+        return self.model(input, label)
 
     def parse_batch_test(self, batch):
         input = batch["img"]
