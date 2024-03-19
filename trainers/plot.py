@@ -394,7 +394,7 @@ class PLOT(TrainerX):
 
         dist = ot.sinkhorn(a=a.float(), b=b.float(), M=ot_distance.float(), numItermax=10000, reg=reg, method="sinkhorn_stabilized")
 
-        return -1 * dist
+        return dist
 
     def parse_batch_train(self, batch):
         input = batch["img"]
