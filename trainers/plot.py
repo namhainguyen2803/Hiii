@@ -312,7 +312,7 @@ class PLOT(TrainerX):
 
         print("Turning off gradients in both the image and the text encoder")
         for name, param in self.model.named_parameters():
-            if "prompt_learner" not in name or "text_feature_embed" not in name or "visual_feature_embed" not in name:
+            if "prompt_learner" not in name and "text_feature_embed" not in name and "visual_feature_embed" not in name:
                 param.requires_grad_(False)
 
         if cfg.MODEL.INIT_WEIGHTS:
