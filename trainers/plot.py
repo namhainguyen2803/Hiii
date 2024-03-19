@@ -243,11 +243,12 @@ class CustomCLIP(nn.Module):
         ot_distance = torch.zeros(num_samples, num_classes).to(self.device)
         for i in range(num_samples):
             for j in range(num_classes):
-                ot_distance[i, j] = sliced_wasserstein_distance(target_samples=image_features[i,:,:],
-                                                                sources_samples=text_features[j,:,:],
-                                                                num_projections=500,
-                                                                p=2,
-                                                                device=self.device)
+                # ot_distance[i, j] = sliced_wasserstein_distance(target_samples=image_features[i,:,:],
+                #                                                 sources_samples=text_features[j,:,:],
+                #                                                 num_projections=500,
+                #                                                 p=2,
+                #                                                 device=self.device)
+                ot_distance[i, j] = compute_true_Wasserstein(X=image_features[i,:,:], Y=text_features[j,:,:])
         return ot_distance
 
 
@@ -274,7 +275,7 @@ class CustomCLIP(nn.Module):
         # text_features.shape == [4, 102, 1024]
         # print(image_features.shape, text_features.shape)
 
-        return self.formulate_OT_Wasserstein_distance(image_features=image_features.float(), text_features=text_features.float())
+        return self.formulate_OT_cosine_distance(image_features=image_features.float(), text_features=text_features.float())
 
 
 @TRAINER_REGISTRY.register()
