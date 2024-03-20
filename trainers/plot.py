@@ -252,8 +252,14 @@ class CustomCLIP(nn.Module):
         ot_distance = torch.zeros(num_samples, num_classes).to(self.device)
         for i in range(num_samples):
             for j in range(num_classes):
-                ot_distance[i, j] = sliced_wasserstein_distance(sources_samples=self.visual_feature_embed(image_features[i, :, :]),
-                                                                target_samples=self.text_feature_embed(text_features[j, :, :]),
+                # ot_distance[i, j] = sliced_wasserstein_distance(sources_samples=self.visual_feature_embed(image_features[i, :, :]),
+                #                                                 target_samples=self.text_feature_embed(text_features[j, :, :]),
+                #                                                 num_projections=500,
+                #                                                 p=2,
+                #                                                 device=self.device)
+
+                ot_distance[i, j] = sliced_wasserstein_distance(sources_samples=image_features[i, :, :],
+                                                                target_samples=text_features[j, :, :],
                                                                 num_projections=500,
                                                                 p=2,
                                                                 device=self.device)
@@ -313,7 +319,10 @@ class PLOT(TrainerX):
         print("Turning off gradients in both the image and the text encoder")
         for name, param in self.model.named_parameters():
             if "prompt_learner" not in name and "text_feature_embed" not in name and "visual_feature_embed" not in name:
+                print(f"Not require grad: {name}")
                 param.requires_grad_(False)
+            else:
+                print(f"require grad: {name}")
 
         if cfg.MODEL.INIT_WEIGHTS:
             load_pretrained_weights(self.model.prompt_learner, cfg.MODEL.INIT_WEIGHTS)
@@ -333,12 +342,12 @@ class PLOT(TrainerX):
         self.sched_prompt = build_lr_scheduler(self.optim_prompt, cfg.OPTIM)
         self.register_model("prompt_learner", self.model.prompt_learner, self.optim_prompt, self.sched_prompt)
 
-        self.optim_text = build_optimizer(self.model.text_feature_embed, cfg.OPTIM)
-        self.sched_text = build_lr_scheduler(self.optim_text, cfg.OPTIM)
+        self.optim_text = build_optimizer(self.model.text_feature_embed, cfg.OPTIM_FEATURE)
+        self.sched_text = build_lr_scheduler(self.optim_text, cfg.OPTIM_FEATURE)
         self.register_model("text_feature_learner", self.model.text_feature_embed, self.optim_text, self.sched_text)
 
-        self.optim_visual = build_optimizer(self.model.visual_feature_embed, cfg.OPTIM)
-        self.sched_visual = build_lr_scheduler(self.optim_visual, cfg.OPTIM)
+        self.optim_visual = build_optimizer(self.model.visual_feature_embed, cfg.OPTIM_FEATURE)
+        self.sched_visual = build_lr_scheduler(self.optim_visual, cfg.OPTIM_FEATURE)
         self.register_model("visual_feature_learner", self.model.visual_feature_embed, self.optim_visual, self.sched_visual)
 
         self.scaler = GradScaler() if cfg.TRAINER.PLOT.PREC == "amp" else None
