@@ -129,8 +129,6 @@ def setup_cfg(args):
 
     cfg.freeze()
 
-    
-
     return cfg
 
 

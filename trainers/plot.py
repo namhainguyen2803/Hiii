@@ -342,12 +342,12 @@ class PLOT(TrainerX):
         self.sched_prompt = build_lr_scheduler(self.optim_prompt, cfg.OPTIM)
         self.register_model("prompt_learner", self.model.prompt_learner, self.optim_prompt, self.sched_prompt)
 
-        self.optim_text = build_optimizer(self.model.text_feature_embed, cfg.OPTIM_FEATURE)
-        self.sched_text = build_lr_scheduler(self.optim_text, cfg.OPTIM_FEATURE)
+        self.optim_text = build_optimizer(self.model.text_feature_embed, cfg.OPTIM)
+        self.sched_text = build_lr_scheduler(self.optim_text, cfg.OPTIM)
         self.register_model("text_feature_learner", self.model.text_feature_embed, self.optim_text, self.sched_text)
 
-        self.optim_visual = build_optimizer(self.model.visual_feature_embed, cfg.OPTIM_FEATURE)
-        self.sched_visual = build_lr_scheduler(self.optim_visual, cfg.OPTIM_FEATURE)
+        self.optim_visual = build_optimizer(self.model.visual_feature_embed, cfg.OPTIM)
+        self.sched_visual = build_lr_scheduler(self.optim_visual, cfg.OPTIM)
         self.register_model("visual_feature_learner", self.model.visual_feature_embed, self.optim_visual, self.sched_visual)
 
         self.scaler = GradScaler() if cfg.TRAINER.PLOT.PREC == "amp" else None
