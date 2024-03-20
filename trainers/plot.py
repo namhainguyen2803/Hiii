@@ -209,13 +209,13 @@ class CustomCLIP(nn.Module):
         self.eps = 0.1
         self.max_iter = 100
 
-        self.text_feature_embed = nn.Sequential(nn.Linear(1024, 256),
-                                                nn.ReLU(),
-                                                nn.Linear(256, 256))
-
-        self.visual_feature_embed = nn.Sequential(nn.Linear(1024, 256),
-                                                  nn.ReLU(),
-                                                  nn.Linear(256, 256))
+        # self.text_feature_embed = nn.Sequential(nn.Linear(1024, 256),
+        #                                         nn.ReLU(),
+        #                                         nn.Linear(256, 256))
+        #
+        # self.visual_feature_embed = nn.Sequential(nn.Linear(1024, 256),
+        #                                           nn.ReLU(),
+        #                                           nn.Linear(256, 256))
 
     def formulate_OT_cosine_distance(self, image_features, text_features):
         M = image_features.shape[0]
@@ -342,13 +342,13 @@ class PLOT(TrainerX):
         self.sched_prompt = build_lr_scheduler(self.optim_prompt, cfg.OPTIM)
         self.register_model("prompt_learner", self.model.prompt_learner, self.optim_prompt, self.sched_prompt)
 
-        self.optim_text = build_optimizer(self.model.text_feature_embed, cfg.OPTIM)
-        self.sched_text = build_lr_scheduler(self.optim_text, cfg.OPTIM)
-        self.register_model("text_feature_learner", self.model.text_feature_embed, self.optim_text, self.sched_text)
-
-        self.optim_visual = build_optimizer(self.model.visual_feature_embed, cfg.OPTIM)
-        self.sched_visual = build_lr_scheduler(self.optim_visual, cfg.OPTIM)
-        self.register_model("visual_feature_learner", self.model.visual_feature_embed, self.optim_visual, self.sched_visual)
+        # self.optim_text = build_optimizer(self.model.text_feature_embed, cfg.OPTIM)
+        # self.sched_text = build_lr_scheduler(self.optim_text, cfg.OPTIM)
+        # self.register_model("text_feature_learner", self.model.text_feature_embed, self.optim_text, self.sched_text)
+        #
+        # self.optim_visual = build_optimizer(self.model.visual_feature_embed, cfg.OPTIM)
+        # self.sched_visual = build_lr_scheduler(self.optim_visual, cfg.OPTIM)
+        # self.register_model("visual_feature_learner", self.model.visual_feature_embed, self.optim_visual, self.sched_visual)
 
         self.scaler = GradScaler() if cfg.TRAINER.PLOT.PREC == "amp" else None
 
@@ -361,6 +361,12 @@ class PLOT(TrainerX):
         print(torch.sum(output))
         loss = F.cross_entropy(-output, label)
         self.model_backward_and_update(loss)
+
+        pred_1 = torch.argmax(-output, dim=1)
+        print(f"Acc max: {torch.sum(pred_1 == label) / len(pred_1)}")
+
+        pred_2 = torch.argmin(-output, dim=1)
+        print(f"Acc min: {torch.sum(pred_2 == label) / len(pred_2)}")
 
         loss_summary = {
             "loss": loss.item(),
