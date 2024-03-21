@@ -280,7 +280,7 @@ class CustomCLIP(nn.Module):
             for j in range(num_classes):
 
                 x = image_features[i, :, :]
-                y = nn.functional.interpolate(input=text_features[j, :, :], size=(1, 1, x.shape[0], x.shape[1]))
+                y = nn.functional.interpolate(input=text_features[j, :, :].unsqueeze(0).unsqueeze(0), size=(x.shape[0], x.shape[1]))
                 y = y.squeeze(0)
                 y = y.squeeze(0)
                 ot_distance[i, j] = sliced_wasserstein_distance(sources_samples=x,
