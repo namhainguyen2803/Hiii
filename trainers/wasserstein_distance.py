@@ -36,6 +36,7 @@ def rand_projections(dim, num_projections=1000, device='cpu'):
 
 
 def one_dimensional_Wasserstein_prod(X, Y, theta, p):
+    print("cacccc")
     X_prod = torch.matmul(X, theta.transpose(0, 1))
     Y_prod = torch.matmul(Y, theta.transpose(0, 1))
     X_prod = X_prod.view(X_prod.shape[0], -1)
