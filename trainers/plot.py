@@ -285,7 +285,7 @@ class CustomCLIP(nn.Module):
                 y = y.squeeze(0)
                 ot_distance[i, j] = sliced_wasserstein_distance(sources_samples=x,
                                                                 target_samples=y,
-                                                                num_projections=600,
+                                                                num_projections=500,
                                                                 p=2,
                                                                 device=self.device)
 
@@ -344,10 +344,10 @@ class PLOT(TrainerX):
         print("Turning off gradients in both the image and the text encoder")
         for name, param in self.model.named_parameters():
             if "prompt_learner" not in name and "text_feature_embed" not in name and "visual_feature_embed" not in name:
-                print(f"Not require grad: {name}")
+                # print(f"Not require grad: {name}")
                 param.requires_grad_(False)
-            else:
-                print(f"require grad: {name}")
+            # else:
+            #     print(f"require grad: {name}")
 
         if cfg.MODEL.INIT_WEIGHTS:
             load_pretrained_weights(self.model.prompt_learner, cfg.MODEL.INIT_WEIGHTS)
