@@ -290,7 +290,7 @@ class CustomCLIP(nn.Module):
         # text_features.shape == [4, 102, 1024]
         # print(image_features.shape, text_features.shape)
 
-        return self.formulate_OT_cosine_distance(image_features=image_features.float(), text_features=text_features.float())
+        return self.formulate_OT_Wasserstein_distance(image_features=image_features.float(), text_features=text_features.float())
 
 
 @TRAINER_REGISTRY.register()
