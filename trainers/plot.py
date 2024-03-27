@@ -246,32 +246,6 @@ class CustomCLIP(nn.Module):
 
         image_features = image_features.permute(1, 0, 2)  # image_features.shape == [32, 49, 1024]
         text_features = text_features.permute(1, 0, 2)  # text_features.shape == [102, 4, 1024]
-
-        num_samples = image_features.shape[0]
-        num_classes = text_features.shape[0]
-        ot_distance = torch.zeros(num_samples, num_classes).to(self.device)
-        for i in range(num_samples):
-            for j in range(num_classes):
-                # ot_distance[i, j] = sliced_wasserstein_distance(sources_samples=self.visual_feature_embed(image_features[i, :, :]),
-                #                                                 target_samples=self.text_feature_embed(text_features[j, :, :]),
-                #                                                 num_projections=500,
-                #                                                 p=2,
-                #                                                 device=self.device)
-
-                ot_distance[i, j] = sliced_wasserstein_distance(sources_samples=image_features[i, :, :],
-                                                                target_samples=text_features[j, :, :],
-                                                                num_projections=500,
-                                                                p=2,
-                                                                device=self.device)
-
-        return ot_distance
-
-    def formulate_OT_Wasserstein_distance(self, image_features, text_features):
-        # image_features.shape == [49, 32, 1024]
-        # text_features.shape == [4, 102, 1024]
-
-        image_features = image_features.permute(1, 0, 2)  # image_features.shape == [32, 49, 1024]
-        text_features = text_features.permute(1, 0, 2)  # text_features.shape == [102, 4, 1024]
         feat_dim = image_features.shape[-1]
 
         num_samples = image_features.shape[0]
@@ -310,13 +284,13 @@ class CustomCLIP(nn.Module):
         text_features = self.text_encoder(prompts, tokenized_prompts)
         text_features = text_features.contiguous().view(self.N, self.n_cls, self.d)
 
-        # image_features = F.normalize(image_features, dim=2)
-        # text_features = F.normalize(text_features, dim=2)
+        image_features = F.normalize(image_features, dim=2)
+        text_features = F.normalize(text_features, dim=2)
         # image_features.shape == [49, 32, 1024]
         # text_features.shape == [4, 102, 1024]
         # print(image_features.shape, text_features.shape)
 
-        return self.formulate_OT_cosine_distance(image_features=image_features.float(), text_features=text_features.float())
+        return self.formulate_OT_Wasserstein_distance(image_features=image_features.float(), text_features=text_features.float())
 
 
 @TRAINER_REGISTRY.register()
