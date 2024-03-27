@@ -272,20 +272,22 @@ class CustomCLIP(nn.Module):
 
         image_features = image_features.permute(1, 0, 2)  # image_features.shape == [32, 49, 1024]
         text_features = text_features.permute(1, 0, 2)  # text_features.shape == [102, 4, 1024]
+        feat_dim = image_features.shape[-1]
 
         num_samples = image_features.shape[0]
         num_classes = text_features.shape[0]
         ot_distance = torch.zeros(num_samples, num_classes).to(self.device)
+        theta = rand_projections(dim=feat_dim, num_projections=1000, device=self.device)
+
         for i in range(num_samples):
             for j in range(num_classes):
 
                 x = image_features[i, :, :]
-                y = nn.functional.interpolate(input=text_features[j, :, :].unsqueeze(0).unsqueeze(0), size=(x.shape[0], x.shape[1]))
-                y = y.squeeze(0)
-                y = y.squeeze(0)
+                y = text_features[j, :, :]
                 ot_distance[i, j] = sliced_wasserstein_distance(sources_samples=x,
                                                                 target_samples=y,
-                                                                num_projections=500,
+                                                                num_projections=1000,
+                                                                theta=theta,
                                                                 p=2,
                                                                 device=self.device)
 
@@ -314,8 +316,7 @@ class CustomCLIP(nn.Module):
         # text_features.shape == [4, 102, 1024]
         # print(image_features.shape, text_features.shape)
 
-        return self.formulate_OT_Wasserstein_distance(image_features=image_features.float(),
-                                                      text_features=text_features.float())
+        return self.formulate_OT_cosine_distance(image_features=image_features.float(), text_features=text_features.float())
 
 
 @TRAINER_REGISTRY.register()

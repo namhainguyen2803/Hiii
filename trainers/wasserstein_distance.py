@@ -279,11 +279,17 @@ def lowerbound_FEFBSW_list(Xs, X, L=10, p=2, device='cpu'):
 def sliced_wasserstein_distance(sources_samples,
                                 target_samples,
                                 num_projections=50,
+                                theta=None,
                                 p=2,
                                 device='cpu'):
     assert target_samples.shape[1] == sources_samples.shape[1]
     embedding_dim = sources_samples.shape[1]
-    projections = rand_projections(dim=embedding_dim, num_projections=num_projections, device=device)
+
+    if theta is None:
+        projections = rand_projections(dim=embedding_dim, num_projections=num_projections, device=device)
+    else:
+        projections = theta
+
     return one_dimensional_Wasserstein_interpolate(X=sources_samples.float(), Y=target_samples.float(),
                                                    num_projections=num_projections,
                                                    theta=projections.float(), p=p, device=device).mean()
