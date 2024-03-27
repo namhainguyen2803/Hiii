@@ -289,6 +289,7 @@ def sliced_wasserstein_distance(sources_samples,
         projections = rand_projections(dim=embedding_dim, num_projections=num_projections, device=device)
     else:
         projections = theta
+        num_projections = theta.shape[0]
 
     return one_dimensional_Wasserstein_interpolate(X=sources_samples.float(), Y=target_samples.float(),
                                                    num_projections=num_projections,
