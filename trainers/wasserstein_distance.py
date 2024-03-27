@@ -3,6 +3,7 @@ import torch
 import ot
 from torch.nn.functional import pad
 import torch.nn.functional as F
+from torchinterp1d import Interp1d
 
 
 def quantile_function(qs, cws, xs):
@@ -275,19 +276,45 @@ def lowerbound_FEFBSW_list(Xs, X, L=10, p=2, device='cpu'):
     return torch.max(sws)
 
 
-def sliced_wasserstein_distance(target_samples,
-                                sources_samples,
+def sliced_wasserstein_distance(sources_samples,
+                                target_samples,
                                 num_projections=50,
                                 p=2,
                                 device='cpu'):
-
     assert target_samples.shape[1] == sources_samples.shape[1]
     embedding_dim = sources_samples.shape[1]
     projections = rand_projections(dim=embedding_dim, num_projections=num_projections, device=device)
-    return one_dimensional_Wasserstein(X=sources_samples.float(), Y=target_samples.float(), theta=projections.float()).mean()
-    # encoded_projections = target_samples.matmul(projections.transpose(0, 1))
-    # distribution_projections = (sources_samples.matmul(projections.transpose(0, 1)))
-    # wasserstein_distance = (torch.sort(encoded_projections.transpose(0, 1), dim=1)[0] -
-    #                         torch.sort(distribution_projections.transpose(0, 1), dim=1)[0])
-    # wasserstein_distance = torch.pow(wasserstein_distance, p)
-    # return wasserstein_distance.mean()
+    return one_dimensional_Wasserstein_interpolate(X=sources_samples.float(), Y=target_samples.float(),
+                                                   num_projections=num_projections,
+                                                   theta=projections.float(), p=p, device=device).mean()
+
+
+def one_dimensional_Wasserstein_interpolate(X, Y, num_projections, theta, p, device):
+    if X.shape[0] == Y.shape[0]:
+        return one_dimensional_Wasserstein_prod(X=X, Y=Y, theta=theta, p=2)
+    else:
+        N = X.shape[0]
+        M = Y.shape[0]
+        # theta has shape (num_projection, dim)
+        X_prod = torch.matmul(X, theta.transpose(0, 1))  # (num_x, num_projections)
+        Y_prod = torch.matmul(Y, theta.transpose(0, 1))  # (num_y, num_projections)
+        X_prod = X_prod.view(X_prod.shape[0], -1)
+        Y_prod = Y_prod.view(Y_prod.shape[0], -1)
+        sorted_X_prod = torch.sort(X_prod, dim=0)[0]
+        sorted_Y_prod = torch.sort(Y_prod, dim=0)[0]
+
+        quant_x_old = torch.linspace(0, 1, N + 2)[1:-1].unsqueeze(0).repeat(num_projections, 1).to(
+            device)  # shape = (num_projections, N)
+        quant_x_new = torch.linspace(0, 1, M + 2)[1:-1].unsqueeze(0).repeat(num_projections, 1).to(
+            device)  # shape = (num_projections, M)
+
+        interp_x = Interp1d().apply(quant_x_old, torch.transpose(sorted_X_prod, 0, 1), quant_x_new)
+        interp_x = interp_x.view(num_projections, 1)  # shape = (num_projections, M)
+
+        x_sorted_interpolated = torch.transpose(interp_x, 0, 1)  # shape = (M, num_projections)
+
+        y_sorted_interpolated = torch.sort(sorted_Y_prod.expand(x_sorted_interpolated.shape), dim=1)
+
+        wasserstein_distance = torch.abs(x_sorted_interpolated - y_sorted_interpolated)
+        wasserstein_distance = torch.mean(torch.pow(wasserstein_distance, p), dim=0, keepdim=True)
+        return wasserstein_distance
