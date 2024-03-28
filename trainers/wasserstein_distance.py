@@ -320,8 +320,8 @@ def one_dimensional_Wasserstein_interpolate(X, Y, num_projections, theta, p, dev
 
         x_sorted_interpolated = torch.transpose(interp_x, 0, 1)  # shape = (M, num_projections)
 
-        y_sorted_interpolated = torch.sort(Y_prod.expand(x_sorted_interpolated.shape), dim=1)[0]
+        y_sorted_interpolated = torch.sort(Y_prod, dim=0)[0]
 
         wasserstein_distance = torch.abs(x_sorted_interpolated - y_sorted_interpolated)
         wasserstein_distance = torch.mean(torch.pow(wasserstein_distance, p), dim=0, keepdim=True)
-        return wasserstein_distance
+        return torch.pow(wasserstein_distance, 1/p)
