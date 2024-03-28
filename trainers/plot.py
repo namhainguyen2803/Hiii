@@ -240,7 +240,7 @@ class CustomCLIP(nn.Module):
 
         return ot_distance
 
-    def formulate_OT_Wasserstein_distance(self, image_features, text_features):
+    def formulate_OT_Wasserstein_distance(self, image_features, text_features, theta=None):
         # image_features.shape == [49, 32, 1024]
         # text_features.shape == [4, 102, 1024]
 
@@ -251,7 +251,11 @@ class CustomCLIP(nn.Module):
         num_samples = image_features.shape[0]
         num_classes = text_features.shape[0]
         ot_distance = torch.zeros(num_samples, num_classes).to(self.device)
-        theta = rand_projections(dim=feat_dim, num_projections=5000, device=self.device)
+
+        NUM_PROJECTION = 2000
+
+        if theta is None:
+            theta = rand_projections(dim=feat_dim, num_projections=NUM_PROJECTION, device=self.device)
 
         for i in range(num_samples):
             for j in range(num_classes):
@@ -260,7 +264,7 @@ class CustomCLIP(nn.Module):
                 y = text_features[j, :, :]
                 ot_distance[i, j] = sliced_wasserstein_distance(sources_samples=x,
                                                                 target_samples=y,
-                                                                num_projections=10000,
+                                                                num_projections=NUM_PROJECTION,
                                                                 theta=theta,
                                                                 p=2,
                                                                 device=self.device)
