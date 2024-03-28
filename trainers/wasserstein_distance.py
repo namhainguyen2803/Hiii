@@ -291,7 +291,7 @@ def sliced_wasserstein_distance(sources_samples,
         projections = theta
         num_projections = theta.shape[0]
 
-    return one_dimensional_Wasserstein_interpolate(X=sources_samples.float(), Y=target_samples.float(),
+    return one_dimensional_Wasserstein_interpolate(Y=sources_samples.float(), X=target_samples.float(),
                                                    num_projections=num_projections,
                                                    theta=projections.float(), p=p, device=device).mean()
 
@@ -302,6 +302,7 @@ def one_dimensional_Wasserstein_interpolate(X, Y, num_projections, theta, p, dev
     else:
         N = X.shape[0]
         M = Y.shape[0]
+        assert N < M, "number of samples in X must be less than number of samples in Y"
         # theta has shape (num_projection, dim)
         X_prod = torch.matmul(X, theta.transpose(0, 1))  # (num_x, num_projections)
         Y_prod = torch.matmul(Y, theta.transpose(0, 1))  # (num_y, num_projections)
