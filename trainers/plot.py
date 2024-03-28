@@ -251,7 +251,7 @@ class CustomCLIP(nn.Module):
         num_samples = image_features.shape[0]
         num_classes = text_features.shape[0]
         ot_distance = torch.zeros(num_samples, num_classes).to(self.device)
-        theta = rand_projections(dim=feat_dim, num_projections=10000, device=self.device)
+        theta = rand_projections(dim=feat_dim, num_projections=5000, device=self.device)
 
         for i in range(num_samples):
             for j in range(num_classes):
